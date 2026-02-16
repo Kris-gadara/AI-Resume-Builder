@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{ name }} - Resume</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+        color: #333;
+        line-height: 1.6;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 40px 60px;
+      }
+      .header {
+        text-align: center;
+        border-bottom: 2px solid #2b3a67;
+        padding-bottom: 16px;
+        margin-bottom: 24px;
+      }
+      .header h1 {
+        font-size: 28px;
+        color: #2b3a67;
+        margin-bottom: 6px;
+      }
+      .header .contact {
+        font-size: 14px;
+        color: #496a81;
+      }
+      .section {
+        margin-bottom: 20px;
+      }
+      .section h2 {
+        font-size: 16px;
+        color: #2b3a67;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        border-bottom: 1px solid #ccc;
+        padding-bottom: 4px;
+        margin-bottom: 10px;
+      }
+      .section p,
+      .section li {
+        font-size: 14px;
+        margin-bottom: 4px;
+      }
+      ul {
+        list-style: disc;
+        padding-left: 24px;
+      }
+      .sub-heading {
+        font-weight: bold;
+        color: #496a81;
+        margin-top: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <h1>{{ name }}</h1>
+      <div class="contact">
+        {{ email }}{% if phone %} | {{ phone }}{% endif %}
+      </div>
+    </div>
+
+    {% if summary %}
+    <div class="section">
+      <h2>Professional Summary</h2>
+      <p>{{ summary }}</p>
+    </div>
+    {% endif %} {% if skills %}
+    <div class="section">
+      <h2>Skills</h2>
+      <p>{{ skills }}</p>
+    </div>
+    {% endif %} {% if experience %}
+    <div class="section">
+      <h2>Professional Experience</h2>
+      <p>{{ experience | replace('\n', '<br />') }}</p>
+    </div>
+    {% endif %} {% if education %}
+    <div class="section">
+      <h2>Education</h2>
+      <p>{{ education }}</p>
+    </div>
+    {% endif %}
+  </body>
+</html>

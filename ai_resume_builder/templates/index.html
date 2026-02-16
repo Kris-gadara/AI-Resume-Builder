@@ -1,0 +1,412 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI Resume Builder — ATS-Optimized Resumes</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📄</text></svg>"
+    />
+    <link rel="stylesheet" href="/static/css/style.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <!-- ====== HEADER ====== -->
+    <header class="app-header">
+      <div class="container header-inner">
+        <div class="logo">
+          <span class="logo-icon">🧠</span>
+          <div>
+            <h1>AI Resume Builder</h1>
+            <p class="tagline">
+              Generate ATS-optimized resumes powered by Gemini AI
+            </p>
+          </div>
+        </div>
+        <nav class="header-actions">
+          <a href="/docs" target="_blank" class="btn btn-ghost">API Docs</a>
+        </nav>
+      </div>
+    </header>
+
+    <!-- ====== TOAST CONTAINER ====== -->
+    <div id="toast-container"></div>
+
+    <!-- ====== MAIN ====== -->
+    <main class="container main-grid">
+      <!-- ————————————————— LEFT: FORM ————————————————— -->
+      <section id="form-section" class="card form-card">
+        <div class="card-header">
+          <h2>📝 Build Your Resume</h2>
+          <div class="header-btns">
+            <button
+              type="button"
+              class="btn btn-outline btn-sm"
+              onclick="loadSampleData()"
+            >
+              Load Sample
+            </button>
+            <button
+              type="button"
+              class="btn btn-ghost btn-sm"
+              onclick="clearForm()"
+            >
+              Clear
+            </button>
+          </div>
+        </div>
+
+        <form
+          id="resume-form"
+          onsubmit="
+            event.preventDefault();
+            generateResume();
+          "
+          novalidate
+        >
+          <!-- ——— Personal Info ——— -->
+          <fieldset>
+            <legend>Personal Information</legend>
+            <div class="field-row two-col">
+              <div class="field">
+                <label for="name">Full Name <span class="req">*</span></label>
+                <input
+                  type="text"
+                  id="name"
+                  name="name"
+                  placeholder="John Doe"
+                  required
+                />
+                <span class="field-error" id="name-error"></span>
+              </div>
+              <div class="field">
+                <label for="email">Email <span class="req">*</span></label>
+                <input
+                  type="email"
+                  id="email"
+                  name="email"
+                  placeholder="john@example.com"
+                  required
+                />
+                <span class="field-error" id="email-error"></span>
+              </div>
+            </div>
+            <div class="field-row three-col">
+              <div class="field">
+                <label for="phone">Phone</label>
+                <input
+                  type="tel"
+                  id="phone"
+                  name="phone"
+                  placeholder="+1-555-123-4567"
+                />
+              </div>
+              <div class="field">
+                <label for="linkedin">LinkedIn URL</label>
+                <input
+                  type="url"
+                  id="linkedin"
+                  name="linkedin"
+                  placeholder="https://linkedin.com/in/johndoe"
+                />
+              </div>
+              <div class="field">
+                <label for="portfolio">Portfolio URL</label>
+                <input
+                  type="url"
+                  id="portfolio"
+                  name="portfolio"
+                  placeholder="https://johndoe.dev"
+                />
+              </div>
+            </div>
+          </fieldset>
+
+          <!-- ——— Professional ——— -->
+          <fieldset>
+            <legend>Professional Profile</legend>
+            <div class="field-row two-col">
+              <div class="field">
+                <label for="current_role">Current / Most Recent Role</label>
+                <input
+                  type="text"
+                  id="current_role"
+                  name="current_role"
+                  placeholder="Senior Software Engineer"
+                />
+              </div>
+              <div class="field">
+                <label for="years_experience">Years of Experience</label>
+                <input
+                  type="number"
+                  id="years_experience"
+                  name="years_experience"
+                  min="0"
+                  max="50"
+                  placeholder="5"
+                />
+              </div>
+            </div>
+            <div class="field">
+              <label for="professional_summary"
+                >Professional Summary (optional — AI will generate one if
+                blank)</label
+              >
+              <textarea
+                id="professional_summary"
+                name="professional_summary"
+                rows="3"
+                placeholder="Brief overview of your professional background …"
+              ></textarea>
+            </div>
+          </fieldset>
+
+          <!-- ——— Skills ——— -->
+          <fieldset>
+            <legend>Skills</legend>
+            <div class="field">
+              <label for="skills"
+                >Technical Skills <span class="req">*</span></label
+              >
+              <textarea
+                id="skills"
+                name="skills"
+                rows="2"
+                required
+                placeholder="Python, FastAPI, Machine Learning, SQL, Docker, AWS, React …"
+              ></textarea>
+              <span class="field-error" id="skills-error"></span>
+              <span class="field-hint"
+                >Comma-separated list of your technical skills</span
+              >
+            </div>
+            <div class="field">
+              <label for="soft_skills">Soft Skills</label>
+              <textarea
+                id="soft_skills"
+                name="soft_skills"
+                rows="2"
+                placeholder="Leadership, Communication, Problem-solving, Teamwork …"
+              ></textarea>
+            </div>
+          </fieldset>
+
+          <!-- ——— Work Experience (dynamic) ——— -->
+          <fieldset>
+            <legend>Work Experience</legend>
+            <div id="experience-list">
+              <!-- Dynamic entries injected here -->
+            </div>
+            <button
+              type="button"
+              class="btn btn-outline btn-sm add-btn"
+              onclick="addExperienceField()"
+            >
+              + Add Experience
+            </button>
+          </fieldset>
+
+          <!-- ——— Education (dynamic) ——— -->
+          <fieldset>
+            <legend>Education</legend>
+            <div id="education-list">
+              <!-- Dynamic entries injected here -->
+            </div>
+            <button
+              type="button"
+              class="btn btn-outline btn-sm add-btn"
+              onclick="addEducationField()"
+            >
+              + Add Education
+            </button>
+          </fieldset>
+
+          <!-- ——— Projects (dynamic) ——— -->
+          <fieldset>
+            <legend>Projects (optional)</legend>
+            <div id="projects-list">
+              <!-- Dynamic entries injected here -->
+            </div>
+            <button
+              type="button"
+              class="btn btn-outline btn-sm add-btn"
+              onclick="addProjectField()"
+            >
+              + Add Project
+            </button>
+          </fieldset>
+
+          <!-- ——— Target Job ——— -->
+          <fieldset>
+            <legend>Target Job</legend>
+            <div class="field">
+              <label for="target_role"
+                >Target Job Title <span class="req">*</span></label
+              >
+              <input
+                type="text"
+                id="target_role"
+                name="target_role"
+                required
+                placeholder="Senior Python Developer"
+              />
+              <span class="field-error" id="target_role-error"></span>
+            </div>
+            <div class="field">
+              <label for="job_description"
+                >Job Description <span class="req">*</span></label
+              >
+              <textarea
+                id="job_description"
+                name="job_description"
+                rows="5"
+                required
+                placeholder="Paste the full job description here for ATS keyword analysis …"
+              ></textarea>
+              <span class="field-error" id="job_description-error"></span>
+            </div>
+          </fieldset>
+
+          <!-- ——— Submit ——— -->
+          <div class="form-actions">
+            <button
+              type="submit"
+              class="btn btn-primary btn-lg"
+              id="submit-btn"
+            >
+              <span class="btn-text">🚀 Generate Resume</span>
+            </button>
+            <button
+              type="button"
+              class="btn btn-secondary btn-lg"
+              onclick="clearForm()"
+            >
+              Clear Form
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <!-- ————————————————— RIGHT: RESULTS ————————————————— -->
+
+      <!-- LOADING STATE -->
+      <section id="loading-section" class="card results-card hidden">
+        <div class="loading-content">
+          <div class="spinner"></div>
+          <h3>Generating your optimized resume…</h3>
+          <p class="loading-sub">
+            Our AI is crafting ATS-friendly content, analysing keywords, and
+            building your PDF.
+          </p>
+          <div class="loading-steps">
+            <div class="step active" id="step-summary">
+              ✦ Writing professional summary
+            </div>
+            <div class="step" id="step-skills">✦ Optimizing skills</div>
+            <div class="step" id="step-experience">✦ Enhancing experience</div>
+            <div class="step" id="step-match">✦ Calculating job match</div>
+            <div class="step" id="step-pdf">✦ Generating PDF</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- RESULTS -->
+      <section id="results-section" class="results-card hidden">
+        <!-- Match Score -->
+        <div class="card score-card" id="score-card">
+          <h2>Job Match Score</h2>
+          <div class="score-ring-wrapper">
+            <svg class="score-ring" viewBox="0 0 120 120">
+              <circle class="ring-bg" cx="60" cy="60" r="52" />
+              <circle
+                class="ring-fill"
+                id="ring-fill"
+                cx="60"
+                cy="60"
+                r="52"
+                stroke-dasharray="326.73"
+                stroke-dashoffset="326.73"
+              />
+            </svg>
+            <span class="score-value" id="score-value">0%</span>
+          </div>
+          <p class="score-analysis" id="score-analysis"></p>
+        </div>
+
+        <!-- AI Summary -->
+        <div class="card" id="summary-card">
+          <h3>✨ AI-Generated Summary</h3>
+          <p id="ai-summary" class="result-text"></p>
+        </div>
+
+        <!-- Optimized Skills -->
+        <div class="card" id="skills-card">
+          <h3>🎯 Optimized Skills</h3>
+          <div id="optimized-skills" class="result-text"></div>
+        </div>
+
+        <!-- Enhanced Experience -->
+        <div class="card" id="experience-card">
+          <h3>💼 Enhanced Experience</h3>
+          <div id="enhanced-experience" class="result-text"></div>
+        </div>
+
+        <!-- Keyword Analysis -->
+        <div class="card" id="keywords-card">
+          <h3>🔍 Keyword Analysis</h3>
+          <div class="keyword-section">
+            <h4>Matching Keywords</h4>
+            <div id="matching-keywords" class="badge-list"></div>
+          </div>
+          <div class="keyword-section">
+            <h4>Recommendations</h4>
+            <ul id="recommendations-list" class="recommendations"></ul>
+          </div>
+        </div>
+
+        <!-- Download -->
+        <div class="card download-card" id="download-card">
+          <h3>📄 Your Resume is Ready!</h3>
+          <p>
+            Your ATS-optimized resume has been generated as a professional PDF.
+          </p>
+          <div class="download-actions">
+            <button
+              class="btn btn-primary btn-lg"
+              id="download-btn"
+              onclick="downloadPDF()"
+            >
+              ⬇️ Download PDF Resume
+            </button>
+            <button class="btn btn-outline btn-lg" onclick="scrollToForm()">
+              ✏️ Edit & Regenerate
+            </button>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- ====== FOOTER ====== -->
+    <footer class="app-footer">
+      <div class="container footer-inner">
+        <p>
+          Powered by <strong>Google Gemini AI</strong> &amp;
+          <strong>FastAPI</strong>
+        </p>
+        <p class="footer-links">
+          <a href="/docs" target="_blank">API Docs</a>
+          <span>·</span>
+          <a href="/health" target="_blank">Health Check</a>
+        </p>
+      </div>
+    </footer>
+
+    <script src="/static/js/app.js"></script>
+  </body>
+</html>
