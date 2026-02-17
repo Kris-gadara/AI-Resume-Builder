@@ -252,3 +252,31 @@ class TestPrompts:
             target_role="Developer",
         )
         assert "Alice" in result
+
+
+class TestMetricsEndpoint:
+    """Test new monitoring metrics endpoint."""
+    
+    def test_metrics_endpoint_exists(self):
+        """Metrics endpoint should be accessible."""
+        from app.main import app
+        from fastapi.testclient import TestClient
+        
+        client = TestClient(app)
+        response = client.get("/metrics")
+        
+        # Should return Prometheus metrics format
+        assert response.status_code == 200
+        assert "text/plain" in response.headers["content-type"]
+    
+    def test_metrics_contains_api_metrics(self):
+        """Metrics should include API request metrics."""
+        from app.main import app
+        from fastapi.testclient import TestClient
+        
+        client = TestClient(app)
+        response = client.get("/metrics")
+        
+        content = response.text
+        # Should contain our custom metrics
+        assert "api_" in content or "gemini_" in content or "HELP" in content

@@ -21,6 +21,9 @@ from .prompts import (
     ATS_KEYWORD_PROMPT,
     RESUME_RECOMMENDATIONS_PROMPT,
 )
+from .monitoring import track_gemini_call
+from .cache import cached
+from .bias_detector import scan_for_bias, fix_bias_issues
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -97,6 +100,8 @@ def _call_gemini(prompt: str) -> str:
 # Public API
 # ---------------------------------------------------------------------------
 
+@track_gemini_call('generate_resume_summary')
+@cached(prefix='resume_summary', ttl=3600)
 def generate_resume_summary(user_data: dict) -> str:
     """
     Generate a professional resume summary using Gemini.
@@ -117,9 +122,19 @@ def generate_resume_summary(user_data: dict) -> str:
         experience=user_data.get("experience", ""),
         target_role=user_data.get("target_role", ""),
     )
-    return _call_gemini(prompt)
+    result = _call_gemini(prompt)
+    
+    # Check for bias and fix if needed
+    bias_check = scan_for_bias(result)
+    if not bias_check['is_safe']:
+        logger.warning(f"Bias detected in summary: {bias_check['total_issues']} issues")
+        result = fix_bias_issues(result)
+    
+    return result
 
 
+@track_gemini_call('optimize_skills')
+@cached(prefix='optimize_skills', ttl=3600)
 def optimize_skills(skills: str, target_role: str = "") -> str:
     """
     Reorganize and enhance a raw skills list for ATS compatibility.
@@ -143,6 +158,8 @@ def optimize_skills(skills: str, target_role: str = "") -> str:
     return _call_gemini(prompt)
 
 
+@track_gemini_call('enhance_experience')
+@cached(prefix='enhance_experience', ttl=3600)
 def enhance_experience(experience: str, target_role: str = "") -> str:
     """
     Convert raw experience text into achievement-oriented bullet points.
@@ -163,9 +180,19 @@ def enhance_experience(experience: str, target_role: str = "") -> str:
         experience=experience,
         target_role=target_role,
     )
-    return _call_gemini(prompt)
+    result = _call_gemini(prompt)
+    
+    # Check for bias and fix if needed
+    bias_check = scan_for_bias(result)
+    if not bias_check['is_safe']:
+        logger.warning(f"Bias detected in experience: {bias_check['total_issues']} issues")
+        result = fix_bias_issues(result)
+    
+    return result
 
 
+@track_gemini_call('generate_cover_letter')
+@cached(prefix='cover_letter', ttl=3600)
 def generate_cover_letter(user_data: dict) -> str:
     """
     Generate a professional cover letter tailored to a specific job.
@@ -192,6 +219,8 @@ def generate_cover_letter(user_data: dict) -> str:
     return _call_gemini(prompt)
 
 
+@track_gemini_call('extract_ats_keywords')
+@cached(prefix='ats_keywords', ttl=7200)
 def extract_ats_keywords(job_description: str) -> str:
     """
     Extract important ATS keywords from a job description.
@@ -210,6 +239,7 @@ def extract_ats_keywords(job_description: str) -> str:
     return _call_gemini(prompt)
 
 
+@track_gemini_call('generate_recommendations')
 def generate_recommendations(
     summary: str,
     skills: str,

@@ -26,7 +26,10 @@ from .agent import (
     generate_recommendations,
 )
 from .job_matcher import calculate_match_score, get_missing_keywords
+from .semantic_matcher import calculate_hybrid_match_score
 from .resume_generator import generate_pdf
+from .monitoring import track_api_call, record_match_score, record_pdf_generation
+from prometheus_client import generate_latest
 
 # ---------------------------------------------------------------------------
 # Logging
@@ -190,6 +193,13 @@ async def health_check() -> HealthResponse:
     )
 
 
+@app.get("/metrics", tags=["Monitoring"])
+async def metrics():
+    """Prometheus metrics endpoint for monitoring."""
+    from fastapi.responses import Response
+    return Response(content=generate_latest(), media_type="text/plain")
+
+
 # ----- Generate Resume (full pipeline) ------------------------------------
 
 
@@ -199,6 +209,7 @@ async def health_check() -> HealthResponse:
     tags=["Resume"],
     summary="Generate a full AI-optimised resume",
 )
+@track_api_call("generate_resume")
 async def generate_resume(data: UserData) -> ResumeResponse:
     """
     End-to-end pipeline:
@@ -244,7 +255,10 @@ async def generate_resume(data: UserData) -> ResumeResponse:
         resume_text = f"{summary}\n{optimized_skills}\n{enhanced_experience}"
         match_result: dict = {"score": 0.0, "top_keywords": [], "analysis": ""}
         if data.job_description:
-            match_result = calculate_match_score(resume_text, data.job_description)
+            # Use hybrid semantic + keyword matching
+            match_result = calculate_hybrid_match_score(resume_text, data.job_description)
+            # Record match score for monitoring
+            record_match_score(match_result["score"])
 
         # --- Recommendations --------------------------------------------------
         recommendations: list[str] = []
@@ -266,17 +280,22 @@ async def generate_resume(data: UserData) -> ResumeResponse:
                 ]
 
         # --- PDF generation ---------------------------------------------------
-        pdf_path = generate_pdf(
-            {
-                "name": data.name,
-                "email": data.email,
-                "phone": data.phone,
-                "summary": summary,
-                "skills": optimized_skills,
-                "experience": enhanced_experience,
-                "education": data.education,
-            }
-        )
+        try:
+            pdf_path = generate_pdf(
+                {
+                    "name": data.name,
+                    "email": data.email,
+                    "phone": data.phone,
+                    "summary": summary,
+                    "skills": optimized_skills,
+                    "experience": enhanced_experience,
+                    "education": data.education,
+                }
+            )
+            record_pdf_generation("success")
+        except Exception as pdf_err:
+            record_pdf_generation("error")
+            raise
 
         return ResumeResponse(
             summary=summary,
@@ -366,11 +385,16 @@ async def download_pdf(filename: str) -> FileResponse:
     tags=["Job Matching"],
     summary="Analyse resume ↔ job description match",
 )
+@track_api_call("analyze_match")
 async def analyze_match(data: MatchRequest) -> MatchResponse:
-    """Calculate similarity score and keyword analysis."""
+    """Calculate similarity score and keyword analysis (now with semantic matching)."""
     try:
-        result = calculate_match_score(data.resume_text, data.job_description)
+        # Use hybrid semantic + keyword matching
+        result = calculate_hybrid_match_score(data.resume_text, data.job_description)
         missing = get_missing_keywords(data.resume_text, data.job_description)
+        
+        # Record match score for monitoring
+        record_match_score(result["score"])
 
         return MatchResponse(
             score=result["score"],
